@@ -17,6 +17,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 from sqlmodel import select, Session, delete
 from sqlalchemy import func, and_
+from datetime import datetime, timezone
 
 # Load environment
 load_dotenv()
@@ -444,16 +445,20 @@ async def fetch_and_sync():
 
             logger.info("Tank cache size após fetch: %d", len(TANK_CACHE))
 
-            # 4) persist GarageTank: remove old tanks for each account and insert relevant ones (tiers 6/8/10)
+            INSERT_BATCH = int(os.getenv("INSERT_BATCH", "100"))  # commit a cada N inserts
+
+            # 4) persist GarageTank: remove old tanks para cada account e insere relevantes (tiers 6/8/10)
             saved_tanks = 0
             with Session(engine) as s:
                 for acc, items in account_tanks_map.items():
+                    # remove antigos e commit imediato para liberar o trabalho
                     try:
                         s.exec(delete(GarageTank).where(GarageTank.account_id == acc))
                         s.commit()
                     except Exception:
                         s.rollback()
 
+                    to_add = []
                     for it in items:
                         try:
                             tid = int(it.get("tank_id") or it.get("tankId") or 0)
@@ -461,6 +466,7 @@ async def fetch_and_sync():
                             continue
                         if not tid:
                             continue
+
                         meta = TANK_CACHE.get(str(tid), {}) or {}
                         tier = meta.get("tier") or meta.get("level") or None
                         try:
@@ -484,6 +490,7 @@ async def fetch_and_sync():
                             tier=tier,
                         )
 
+                        # set optional fields if model contains them
                         try:
                             if hasattr(gt, "battles"):
                                 gt.battles = int(battles)
@@ -493,14 +500,43 @@ async def fetch_and_sync():
                                 gt.mark_of_mastery = int(mark)
                             if hasattr(gt, "raw_stats"):
                                 gt.raw_stats = json.dumps(it)
+                            if hasattr(gt, "is_premium"):
+                                gt.is_premium = bool(meta.get("is_premium", False))
+                            if hasattr(gt, "nation"):
+                                gt.nation = meta.get("nation")
+                            if hasattr(gt, "type"):
+                                gt.type = meta.get("type")
+                            if hasattr(gt, "image_url"):
+                                images = meta.get("images") or {}
+                                gt.image_url = images.get("big_icon") or images.get("small_icon") or None
                             if hasattr(gt, "last_updated"):
-                                gt.last_updated = int(time.time())
+                                gt.last_updated = datetime.fromtimestamp(int(time.time()), tz=timezone.utc)
                         except Exception:
+                            # não falhar por causa de campos opcionais
                             pass
 
-                        s.add(gt)
-                        saved_tanks += 1
-                s.commit()
+                        to_add.append(gt)
+
+                    # inserir em batches controlados para evitar muitos parâmetros num só INSERT
+                    try:
+                        if to_add:
+                            batch_buf = []
+                            for idx, obj in enumerate(to_add, start=1):
+                                batch_buf.append(obj)
+                                saved_tanks += 1
+                                if len(batch_buf) >= INSERT_BATCH:
+                                    s.add_all(batch_buf)
+                                    s.commit()
+                                    s.expunge_all()  # limpa estado da sessão
+                                    batch_buf = []
+                            # leftover
+                            if batch_buf:
+                                s.add_all(batch_buf)
+                                s.commit()
+                                s.expunge_all()
+                    except Exception:
+                        logger.exception("Erro ao persistir garages para account %s; rollback.", acc)
+                        s.rollback()
 
             logger.info("Sync concluído! Tanks gravados: %d", saved_tanks)
 

@@ -6,6 +6,7 @@ from typing import Dict, Any
 
 from sqlmodel import Session, select
 from dotenv import load_dotenv
+from datetime import datetime, timezone
 
 # garantir que o package 'app' esteja importável (execute a partir da raiz do projeto)
 load_dotenv()
@@ -19,6 +20,7 @@ BATCH_SIZE = int(os.getenv("REHYDRATE_BATCH_SIZE", "200"))
 def load_tank_cache(path: str = CACHE_PATH) -> Dict[str, Any]:
     if not os.path.exists(path):
         print(f"[WARN] cache não encontrado em {path}")
+        gt.last_updated = datetime.fromtimestamp(int(time.time()), tz=timezone.utc)
         return {}
     with open(path, "r", encoding="utf-8") as f:
         try:

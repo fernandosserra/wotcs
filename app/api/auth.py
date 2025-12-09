@@ -137,19 +137,41 @@ def resolve_account_id_from_db(nickname: str) -> Optional[int]:
 # Password helpers (SHA256 -> base64-url -> bcrypt)
 # -------------------------
 def _prehash_to_b64(password: str) -> str:
+    """
+    SHA256 -> urlsafe base64 (sem '=') — e garante <=72 bytes UTF-8.
+    """
     digest = hashlib.sha256(password.encode("utf-8")).digest()
     b64 = base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+    # garante comprimento máximo em bytes para bcrypt (72)
+    b64_bytes = b64.encode("utf-8")
+    if len(b64_bytes) > 72:
+        # trunca os bytes a 72 e decoda ignorando corrompidos (improvável)
+        b64 = b64_bytes[:72].decode("ascii", errors="ignore")
     return b64
 
-
 def hash_password(pw: str) -> str:
+    """
+    Hash seguro para armazenamento: prehash + bcrypt.
+    Trunca novamente como fallback se bcrypt reclamar.
+    """
     short = _prehash_to_b64(pw)
-    return pwdctx.hash(short)
-
+    try:
+        return pwdctx.hash(short)
+    except ValueError as e:
+        # fallback defensivo: corta bytes e re-tenta
+        short_bytes = short.encode("utf-8")[:72]
+        short2 = short_bytes.decode("ascii", errors="ignore")
+        return pwdctx.hash(short2)
 
 def verify_password(plain: str, hashed: str) -> bool:
     short = _prehash_to_b64(plain)
-    return pwdctx.verify(short, hashed)
+    try:
+        return pwdctx.verify(short, hashed)
+    except ValueError:
+        # caso o hashed tenha sido gerado com fallback truncado
+        short_bytes = short.encode("utf-8")[:72]
+        short2 = short_bytes.decode("ascii", errors="ignore")
+        return pwdctx.verify(short2, hashed)
 
 
 # -------------------------

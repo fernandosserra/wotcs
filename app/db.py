@@ -1,34 +1,41 @@
 # app/db.py
 import os
-from sqlmodel import create_engine, SQLModel
+from typing import Generator
+from sqlmodel import create_engine, SQLModel, Session
 from dotenv import load_dotenv
 
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL não está definida no ambiente!")
-
-# SQLite usa connect_args — Postgres NÃO
+# Apenas sqlite usa connect_args
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
-# Cria o engine
-engine = create_engine(
-    DATABASE_URL,
-    echo=False,
-    connect_args=connect_args
-)
+# 🔥 Engine global exportado corretamente
+engine = create_engine(DATABASE_URL, echo=False, connect_args=connect_args)
 
-def get_session():
-    from sqlmodel import Session
+
+def get_engine():
+    """Compatibilidade com scripts externos."""
+    return engine
+
+
+def get_session() -> Generator:
+    """Para dependências FastAPI."""
     with Session(engine) as session:
         yield session
 
-def init_db():
+
+def init_db() -> None:
     """
-    Registra modelos e cria tabelas apenas se forem novas.
-    Importante: Para Postgres, *não recria tabelas existentes*.
+    Importa modelos e registra no metadata.
+    Criar tabelas se não existirem.
     """
-    # Importa os modelos para registrar no metadata
-    import app.models.models
+    # 🔥 Importa modelos sem importar nada que dependa de 'app.main'
+    from app.models import (
+        User,
+        Player,
+        GarageTank,
+    )
+
+    SQLModel.metadata.create_all(engine)

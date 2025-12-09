@@ -2,7 +2,7 @@
 from sqlmodel import SQLModel, Field
 from typing import Optional
 from datetime import datetime
-from sqlalchemy import Boolean, JSON, Column, TIMESTAMP, String, Integer
+from sqlalchemy import Boolean, JSON, Column, TIMESTAMP, String, Integer, DateTime
 
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -33,4 +33,7 @@ class GarageTank(SQLModel, table=True):
     type: Optional[str] = Field(default=None, sa_column=Column("type", String(50)))
     image_url: Optional[str] = Field(default=None, sa_column=Column("image_url", String(255)))
     raw_json: Optional[dict] = Field(default=None, sa_column=Column("raw_json", JSON))
-    last_updated: Optional[datetime] = Field(default=None, sa_column=Column("last_updated", TIMESTAMP(timezone=True)))
+    last_updated: Optional[datetime] = Field(
+    default=None,
+    sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
