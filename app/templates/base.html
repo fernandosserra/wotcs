@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title or "WOTCS: ALPH4 – Companhia de Blindados" }}</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
+
+    <style>
+        body {
+            background: #1a1f1a;
+            color: #f1f1f1;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            background: linear-gradient(90deg, #2d362d, #151a15);
+            padding: 12px 20px;
+            text-align: center;
+            border-bottom: 2px solid #f06292;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand img {
+            height: 64px;
+            width: auto;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(240,98,146,0.18);
+        }
+
+        h1 {
+            margin: 0;
+            text-transform: uppercase;
+            color: #f06292; /* rosa danoninho */
+            letter-spacing: 2px;
+            font-size: 20px;
+        }
+
+        .container {
+            max-width: 880px; /* mais largo para dashboard */
+            margin: 40px auto;
+            background: #252b25;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(240, 98, 146, 0.12);
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            margin-bottom: 18px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #1e1e1e;
+            color: #f1f1f1;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #f06292; /* rosa danoninho */
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 15px;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            background: #ff7cab;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #888;
+            font-size: 12px;
+        }
+
+        a {
+            color: #f06292;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="brand">
+        <!-- LOGO: arquivo alph4.png em app/static/img -->
+        <img src="/static/img/alph4.png" alt="ALPH4 logo">
+        <div>
+            <h1>WOTCS: ALPH4 – Companhia de Blindados</h1>
+            <div style="font-size:12px; color:#ddd; margin-top:4px;">Missão do clã — Honra • Danonão • Fogo nos Mané</div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    {% block content %}{% endblock %}
+</div>
+
+<div class="footer">
+    Criado com orgulho pelo team ALPH4 • Powered by Siegrfried
+</div>
+
+</body>
+</html>

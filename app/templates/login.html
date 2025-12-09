@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+{% set m = request.query_params.get('msg') %}
+{% if m == 'registered' %}
+  <div style="background:#2b2; padding:8px; border-radius:4px; margin-bottom:12px; color:#012; text-align:center;">Conta criada com sucesso. Faça login.</div>
+{% elif m == 'invalid' %}
+  <div style="background:#f88; padding:8px; border-radius:4px; margin-bottom:12px; color:#400; text-align:center;">Usuário ou senha inválidos.</div>
+{% endif %}
+
+<h2 style="text-align:center; color:#f06292;">Login</h2>
+
+<p style="text-align:center; margin-bottom:20px;">
+    <i>"Danonão Grosso: onde só entra quem aguenta o tranco!"</i>
+</p>
+
+<form method="post" action="/auth/login">
+    <label for="username">Usuário:</label>
+    <input type="text" name="username" id="username" required>
+
+    <label for="password">Senha:</label>
+    <input type="password" name="password" id="password" required>
+
+    <button type="submit">Entrar</button>
+</form>
+
+<p style="margin-top:20px; text-align:center;">
+    Ainda não tem conta? <a href="/auth/register">Registrar-se</a>
+</p>
+
+{% endblock %}
+
+    &copy; 2024 WOT – Danonão Grosso. Todos os direitos reservados.

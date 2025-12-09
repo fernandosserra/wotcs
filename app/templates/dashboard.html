@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 style="text-align:center; color:#f06292;">Dashboard do Clã</h2>
+
+<p style="text-align:center; margin-bottom:12px; color:#ddd;">
+    Bem-vindo, {{ user.username }} — Já tomou seu Danonão Grosso hoje?
+</p>
+
+<div style="max-width:880px; margin:0 auto 12px; display:flex; gap:12px; justify-content:center; align-items:stretch;">
+    <div style="background:#212621; padding:12px; border-radius:8px; min-width:180px; text-align:center;">
+        <div style="font-size:12px; color:#bbb;">Média de Batalhas</div>
+        <div style="font-size:20px; color:#f06292; font-weight:bold;">{{ stats.avg_battles }}</div>
+        <div style="font-size:11px; color:#888;">(por tank na seleção)</div>
+    </div>
+    <div style="background:#212621; padding:12px; border-radius:8px; min-width:180px; text-align:center;">
+        <div style="font-size:12px; color:#bbb;">Taxa de Vitória</div>
+        <div style="font-size:20px; color:#f06292; font-weight:bold;">{{ stats.win_pct }}%</div>
+        <div style="font-size:11px; color:#888;">(wins / battles)</div>
+    </div>
+    <div style="background:#212621; padding:12px; border-radius:8px; min-width:180px; text-align:center;">
+        <div style="font-size:12px; color:#bbb;">Total de Marcas</div>
+        <div style="font-size:20px; color:#f06292; font-weight:bold;">{{ stats.total_marks }}</div>
+        <div style="font-size:11px; color:#888;">(marks_of_mastery)</div>
+    </div>
+</div>
+
+<div style="text-align:center; margin-bottom:12px;">
+    <button id="btn-check-sync"
+        style="background:#333; color:#fff; border-radius:6px; padding:8px 12px; border:1px solid #444;">
+        Verificar tanques no banco / Forçar sync se vazio
+    </button>
+    <span id="sync-msg" style="margin-left:12px; color:#bbb;"></span>
+</div>
+
+<form id="filters" method="get" action="/dashboard"
+    style="max-width:880px; margin:0 auto 18px; display:flex; gap:10px; align-items:center; justify-content:center;">
+    {% if user.role == 'commander' %}
+    <div>
+        <label for="player_id" style="color:#ddd; font-size:12px;">Jogador</label><br>
+        <select id="player_id" name="player_id"
+            style="padding:8px; background:#1e1e1e; color:#fff; border-radius:6px; border:1px solid #333;">
+            <option value="">— Todos —</option>
+            {% for p in players %}
+            <option value="{{ p.account_id }}"
+                {% if selected_player and selected_player == p.account_id %}selected{% endif %}>
+                {{ p.nickname }} ({{ p.account_id }})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+
+    <div>
+        <label for="tier" style="color:#ddd; font-size:12px;">Tier</label><br>
+        <select id="tier" name="tier"
+            style="padding:8px; background:#1e1e1e; color:#fff; border-radius:6px; border:1px solid #333;">
+            <option value="">— Todos —</option>
+            <option value="6" {% if selected_tier and selected_tier == 6 %}selected{% endif %}>Tier 6</option>
+            <option value="8" {% if selected_tier and selected_tier == 8 %}selected{% endif %}>Tier 8</option>
+            <option value="10" {% if selected_tier and selected_tier == 10 %}selected{% endif %}>Tier 10</option>
+        </select>
+    </div>
+
+    <div>
+        <label for="nation" style="color:#ddd; font-size:12px;">Nação</label><br>
+        <select id="nation" name="nation"
+            style="padding:8px; background:#1e1e1e; color:#fff; border-radius:6px; border:1px solid #333;">
+            <option value="">— Todas —</option>
+            {% for n in nations %}
+            <option value="{{ n }}" {% if selected_nation and selected_nation == n %}selected{% endif %}>
+                {{ n|capitalize }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <label for="tank_type" style="color:#ddd; font-size:12px;">Tipo</label><br>
+        <select id="tank_type" name="tank_type"
+            style="padding:8px; background:#1e1e1e; color:#fff; border-radius:6px; border:1px solid #333;">
+            <option value="">— Todos —</option>
+            {% for t in types %}
+            <option value="{{ t }}" {% if selected_type and selected_type == t %}selected{% endif %}>
+                {{ t|upper }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <button type="submit" style="min-width:160px;">Listar Tanques</button>
+    </div>
+</form>
+
+<div style="max-width:880px; margin:0 auto;">
+    <table style="width:100%; border-collapse: collapse;">
+        <thead>
+            <tr style="background:#1b1f1b; color:#f06292; text-transform:uppercase;">
+                <th style="padding:10px; border-bottom:1px solid #333; text-align:left;">Jogador</th>
+                <th style="padding:10px; border-bottom:1px solid #333;">Tank</th>
+                <th style="padding:10px; border-bottom:1px solid #333; text-align:center;">Tier</th>
+                <th style="padding:10px; border-bottom:1px solid #333; text-align:center;">Batalhas</th>
+                <th style="padding:10px; border-bottom:1px solid #333; text-align:center;">Vitórias</th>
+                <th style="padding:10px; border-bottom:1px solid #333; text-align:center;">% Vitória</th>
+                <th style="padding:10px; border-bottom:1px solid #333; text-align:center;">Marcas</th>
+                <th style="padding:10px; border-bottom:1px solid #333; text-align:center;">Nação</th>
+                <th style="padding:10px; border-bottom:1px solid #333; text-align:center;">Tipo</th>
+            </tr>
+        </thead>
+        <tbody id="results-body">
+            {% for gt, ply in rows %}
+            <tr style="border-bottom:1px solid #2a2f2a;">
+                <td style="padding:10px;">{{ ply.nickname }}</td>
+                <td style="padding:10px; text-align:left;">{{ gt.tank_name }}</td>
+                <td style="padding:10px; text-align:center;">{{ gt.tier }}</td>
+                <td style="padding:10px; text-align:center;">{{ gt.battles or 0 }}</td>
+                <td style="padding:10px; text-align:center;">{{ gt.wins or 0 }}</td>
+                <td style="padding:10px; text-align:center;">
+                    {% if gt.battles and gt.battles > 0 %}
+                    {{ ((gt.wins or 0) / gt.battles * 100) | round(2) }}%
+                    {% else %}
+                    0%
+                    {% endif %}
+                </td>
+                <td style="padding:10px; text-align:center;">{{ gt.mark_of_mastery or 0 }}</td>
+                <td style="padding:10px; text-align:center;">{{ gt.nation | default('—') }}</td>
+                <td style="padding:10px; text-align:center;">{{ gt.type | default('—') }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9" style="padding:12px; text-align:center; color:#bbb;">Nenhum tank encontrado para o
+                    filtro selecionado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="max-width:880px; margin:12px auto; display:flex; justify-content:space-between; align-items:center;">
+        <div style="color:#bbb; font-size:13px;">
+            Mostrando página {{ page }} de {{ total_pages }} — total {{ total_count }} tanques
+        </div>
+
+        <div>
+            {% if page > 1 %}
+            <a href="?{% if selected_player %}player_id={{ selected_player }}&{% endif %}{% if selected_tier %}tier={{ selected_tier }}&{% endif %}{% if selected_nation %}nation={{ selected_nation }}&{% endif %}{% if selected_type %}tank_type={{ selected_type }}&{% endif %}per_page={{ per_page }}&page={{ page-1 }}"
+                style="margin-right:8px;">◀ Anterior</a>
+            {% endif %}
+            {% if page < total_pages %}
+            <a
+                href="?{% if selected_player %}player_id={{ selected_player }}&{% endif %}{% if selected_tier %}tier={{ selected_tier }}&{% endif %}{% if selected_nation %}nation={{ selected_nation }}&{% endif %}{% if selected_type %}tank_type={{ selected_type }}&{% endif %}per_page={{ per_page }}&page={{ page+1 }}">Próxima
+                ▶</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <p style="margin-top:12px; text-align:right; color:#bbb; font-size:13px;">
+        <a href="/auth/register">Registrar novo membro</a> • <a href="/auth/login">Sair / Trocar usuário</a>
+    </p>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const btn = document.getElementById("btn-check-sync");
+        const msg = document.getElementById("sync-msg");
+        async function checkSync() {
+            msg.textContent = "Verificando dados...";
+            try {
+                const resp = await fetch("/sync/check");
+                const js = await resp.json();
+                if (js.status === "ok") {
+                    msg.textContent = `Banco OK — ${js.found} tanques.`;
+                } else if (js.status === "started") {
+                    msg.textContent =
+                        "Sincronização iniciada em background. Aguarde alguns minutos e clique em Listar Tanques novamente.";
+                } else {
+                    msg.textContent = "Erro: " + (js.msg || "verifique logs.");
+                }
+            } catch (e) {
+                msg.textContent = "Falha ao comunicar com o servidor.";
+            }
+        }
+        // Botão manual
+        btn.addEventListener("click", function(e) {
+            e.preventDefault();
+            checkSync();
+        });
+        // Auto-check ao carregar (se a tabela estiver vazia a API /sync/check irá iniciar o sync)
+        // Somente dispare auto-check se não houver resultados (checar tbody length)
+        const tbody = document.querySelector("#results-body");
+        if (tbody && tbody.children.length <= 1) { // 1 because the "no results" row counts as 1
+            checkSync();
+        }
+    });
+</script>
+
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+{% set m = request.query_params.get('msg') %}
+{% if m == 'exists' %}
+  <div style="background:#f88; padding:8px; border-radius:4px; margin-bottom:12px; color:#400; text-align:center;">Usuário já existe. Escolha outro.</div>
+{% endif %}
+
+<h2 style="text-align:center; color:#f06292;">Registro</h2>
+
+<form method="post" action="/auth/register">
+    <label for="account_id">WoT Account ID (recomendado):</label>
+    <input type="text" name="account_id" id="account_id" placeholder="Ex: 123456789">
+
+    <div style="text-align:center; margin:6px 0; color:#bbb;">ou</div>
+
+    <label for="nickname">Nickname no World of Tanks (se não souber o ID)</label>
+    <input type="text" name="nickname" id="nickname" placeholder="Seu nick exato no WoT">
+
+    <label for="username">Usuário do site:</label>
+    <input type="text" name="username" id="username" required>
+
+    <label for="password">Senha:</label>
+    <input type="password" name="password" id="password" required>
+
+    <!-- campo escondido apenas para deixar o formulário consistente; servidor IGNORA este valor -->
+    <input type="hidden" name="role" value="member">
+
+    <button type="submit">Registrar</button>
+</form>
+
+<p style="margin-top:20px; text-align:center;">
+    Já tem conta? <a href="/auth/login">Fazer login</a>
+</p>
+
+{% endblock %}
